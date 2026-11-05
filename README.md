@@ -24,16 +24,16 @@ Values are in seconds for the delays and timeout, and degrees Celsius for the to
 
 ## RatOS-specific integration
 
-The supplied RatOS startup macro includes a fixed 20-minute soak path. Add this variable to the existing `[gcode_macro RatOS]` section in `printer.cfg` to disable that RatOS soak and replace it with the adaptive path:
+RatOS Beacon adaptive heatsoaking is a separate bed-stability feature. `variable_beacon_adaptive_heat_soak` controls that Beacon-based bed soak. It does not turn off the chamber heater macro or replace its chamber-temperature wait. Keep the chamber macro override below to route the chamber wait through this add-on. RatOS bed heatsoaking is configured separately through `bed_heat_soak_time` and related settings.
 
 ```ini
 # Adaptive Heat Soak
 variable_beacon_adaptive_heat_soak: False
 ```
 
-The existing `[gcode_macro RatOS]` section is usually already defined, so add only the comment and variable inside it. Do not add a duplicate section. Use `False` exactly as shown for this setup.
+The existing `[gcode_macro RatOS]` section is usually already defined, so add only the comment and variable inside it. Do not add a duplicate section. `False` disables Beacon adaptive bed heatsoaking. Set it only if that is the desired bed-soak behavior. It does not disable the chamber equilibrium gate or the chamber heater.
 
-## RatOS hardware checks before enabling
+## RatOS chamber integration and hardware checks before enabling
 
 Your supplied RatOS macro requests a 150 C chamber-heater preheat, while the supplied Klipper heater `max_temp` is 80 C. This package explicitly ignores the 150 C request and sets `variable_chamber_heater_preheating_temp: 80`, retaining the existing 80 C `max_temp`. Klipper rejects heater targets above `max_temp`. The printing target plus RatOS heating offset must also stay at or below 80 C or Klipper will reject it. The 80 C limit itself still needs to match the heater, sensor, wiring, and chamber materials' manufacturer ratings before enabling heat.
 
@@ -43,7 +43,7 @@ The supplied snippets do not include the chamber heater section or verify_heater
 
 - `chamber_equilibrium.py` → Klipper `klippy/extras/chamber_equilibrium.py` on the printer host. Common RatOS path is `/home/pi/klipper/klippy/extras/`.
 - `chamber_equilibrium.cfg` → printer configuration directory, commonly `~/printer_data/config/`.
-- `chamber_heater_override.cfg` → reference patch for the existing RatOS `_CHAMBER_HEATER_ON` macro. Apply the two documented edits to a copy of the existing macro. Do not add a duplicate `[gcode_macro _CHAMBER_HEATER_ON]` section. Preserve RatOS fan, bed, toolhead movement, filter, post-preheat, and delayed-control code.
+- `chamber_heater_override.cfg` → reference patch for the existing RatOS `_CHAMBER_HEATER_ON` macro. This override is required to replace that macro’s blocking chamber-temperature wait with the equilibrium check. Apply the documented edits to a copy of the existing macro. Do not add a duplicate `[gcode_macro _CHAMBER_HEATER_ON]` section. Preserve RatOS fan, bed, toolhead movement, filter, post-preheat, and delayed-control code.
 
 ## Backup and install
 
