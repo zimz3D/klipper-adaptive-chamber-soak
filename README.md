@@ -8,7 +8,19 @@ Klipper add-on that replaces a fixed chamber soak with a temperature-stability c
 
 ## Klipper add-on
 
-The add-on samples 8 minutes after the wait begins, then every 5 minutes. It passes only when the chamber is at least target minus 3 C and the absolute change from the previous five-minute sample is at most 3 C. A 90-minute timeout raises an error and stops startup. The caller supplies the target temperature and sensor.
+The target temperature comes from the caller, such as the slicer-driven RatOS startup macro. Timing, sensor name, and temperature tolerances can be customized in the `[chamber_equilibrium]` section of `printer.cfg`:
+
+```ini
+[chamber_equilibrium]
+sensor: temperature_sensor chamber
+initial_delay: 480
+interval: 300
+target_tolerance: 3
+stability_tolerance: 3
+max_wait: 5400
+```
+
+Values are in seconds for the delays and timeout, and degrees Celsius for the tolerances. Defaults give an 8-minute first sample, 5-minute intervals, a minimum temperature of target minus 3 C, a maximum 3 C change between adjacent readings, and a 90-minute fail-closed timeout. The `WAIT_CHAMBER_EQUILIBRIUM` command can also override these defaults per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
 
 ## RatOS-specific integration
 
@@ -36,8 +48,8 @@ The supplied snippets do not include the chamber heater section or verify_heater
 ## Backup and install
 
 1. In Mainsail/Fluidd, download a backup of `printer.cfg` and the RatOS chamber-heater configuration file that defines `_CHAMBER_HEATER_ON`. Also save the current `klippy.log`.
-2. Upload `chamber_equilibrium.py` to `/home/pi/klipper/klippy/extras/` and the cfg to `~/printer_data/config/`.
-3. Add `[chamber_equilibrium]` to `printer.cfg` and add ` [include chamber_equilibrium.cfg]` only if your RatOS setup supports that section loading arrangement. Klipper extras are normally loaded by a `[chamber_equilibrium]` config section. Include the local file using its actual absolute config path if needed.
+2. Upload `chamber_equilibrium.py` to `/home/pi/klipper/klippy/extras/` and `chamber_equilibrium.cfg` to `~/printer_data/config/`.
+3. Include `chamber_equilibrium.cfg` from `printer.cfg` using its actual config path, for example `[include chamber_equilibrium.cfg]`. Set the sensor and timing values in that file as needed. Klipper loads the Python extra through its `[chamber_equilibrium]` section.
 4. Apply the macro edits described in `chamber_heater_override.cfg` to the existing macro copy in your user config, ensuring the include order loads your customized definition in place of the RatOS definition. Config section override behavior depends on your RatOS version. Validate duplicate-section handling before restarting.
 5. In the `[gcode_macro RatOS]` settings override, set `variable_chamber_heater_preheating_temp: 80`. This disregards the old 150 C request. Keep the heater `max_temp: 80` unchanged. Resolve the printing offset and duplicate PF4 as described above before using chamber heat.
 6. Restart Klipper. If it fails to start, restore the backed-up configs and remove the Python extra.
