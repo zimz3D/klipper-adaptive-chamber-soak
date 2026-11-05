@@ -4,6 +4,15 @@ Klipper add-on for adaptive chamber heat soaking, including a RatOS integration 
 
 ## RatOS package
 
+Add this variable to the existing `[gcode_macro RatOS]` section in `printer.cfg`. RatOS needs it to bypass the default 20-minute soak and use the adaptive soak path:
+
+```ini
+# Adaptive Heat Soak
+variable_beacon_adaptive_heat_soak: False
+```
+
+The existing `[gcode_macro RatOS]` section is usually already defined, so add only the comment and variable inside it. Do not add a duplicate section. Use `False` exactly as shown for this setup.
+
 This package adds a chamber stability gate to startup. It samples 8 minutes after the wait begins, then every 5 minutes. It passes only when the chamber is at least target minus 3 C and the absolute change from the previous five-minute sample is at most 3 C. A 90-minute timeout raises an error and stops startup.
 
 ## Important hardware checks before enabling
