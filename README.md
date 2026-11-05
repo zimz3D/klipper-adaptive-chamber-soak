@@ -1,10 +1,14 @@
 # klipper-adaptive-chamber-soak
 
-Klipper add-on for adaptive chamber heat soaking, including a RatOS integration patch.
+Klipper add-on that replaces a fixed chamber soak with a temperature-stability check. The core command is usable from Klipper macros, with a RatOS-specific integration described below.
 
-## RatOS package
+## Klipper add-on
 
-Add this variable to the existing `[gcode_macro RatOS]` section in `printer.cfg`. RatOS needs it to bypass the default 20-minute soak and use the adaptive soak path:
+The add-on samples 8 minutes after the wait begins, then every 5 minutes. It passes only when the chamber is at least target minus 3 C and the absolute change from the previous five-minute sample is at most 3 C. A 90-minute timeout raises an error and stops startup. The caller supplies the target temperature and sensor.
+
+## RatOS-specific integration
+
+The supplied RatOS startup macro includes a fixed 20-minute soak path. Add this variable to the existing `[gcode_macro RatOS]` section in `printer.cfg` to disable that RatOS soak and replace it with the adaptive path:
 
 ```ini
 # Adaptive Heat Soak
@@ -13,9 +17,7 @@ variable_beacon_adaptive_heat_soak: False
 
 The existing `[gcode_macro RatOS]` section is usually already defined, so add only the comment and variable inside it. Do not add a duplicate section. Use `False` exactly as shown for this setup.
 
-This package adds a chamber stability gate to startup. It samples 8 minutes after the wait begins, then every 5 minutes. It passes only when the chamber is at least target minus 3 C and the absolute change from the previous five-minute sample is at most 3 C. A 90-minute timeout raises an error and stops startup.
-
-## Important hardware checks before enabling
+## RatOS hardware checks before enabling
 
 Your supplied RatOS macro requests a 150 C chamber-heater preheat, while the supplied Klipper heater `max_temp` is 80 C. This package explicitly ignores the 150 C request and sets `variable_chamber_heater_preheating_temp: 80`, retaining the existing 80 C `max_temp`. Klipper rejects heater targets above `max_temp`. The printing target plus RatOS heating offset must also stay at or below 80 C or Klipper will reject it. The 80 C limit itself still needs to match the heater, sensor, wiring, and chamber materials' manufacturer ratings before enabling heat.
 
