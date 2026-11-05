@@ -1,5 +1,9 @@
 # klipper-adaptive-chamber-soak
 
+> **Safety and liability notice**
+>
+> This software controls or influences chamber-heating behavior. Improper configuration, installation, or use may cause equipment damage, fire, personal injury, or property loss. You are solely responsible for assessing suitability, verifying all hardware and temperature limits, installing and configuring the software correctly, supervising operation, and maintaining appropriate independent safety protections. This project is provided “as is,” without warranty. To the fullest extent permitted by applicable law, the authors and contributors disclaim liability for damage, injury, loss, or claims arising from the software or its use. Do not rely on this software as a substitute for hardware safety controls or safe operating practices.
+
 Klipper add-on that replaces a fixed chamber soak with a temperature-stability check. The core command is usable from Klipper macros, with a RatOS-specific integration described below.
 
 ## Klipper add-on
