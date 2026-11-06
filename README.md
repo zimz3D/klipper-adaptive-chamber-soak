@@ -13,26 +13,23 @@ The target temperature comes from the caller, such as the slicer-driven RatOS st
 ```ini
 [chamber_equilibrium]
 sensor: temperature_sensor chamber
-interval: 60
+initial_delay: 480
+interval: 300
 target_tolerance: 3
 stability_tolerance: 3
-stability_window: 300
-max_wait: 1800
-heating_rate_window: 300
-heating_rate_grace: 300
-min_heating_rate: 0
+max_wait: 5400
 ```
 
-The command samples immediately, then every minute. It reports the current chamber temperature, the latest minute-to-minute rate in C/min, and the rolling warm-up rate when enough samples are available. The configurable no-heating check runs only below the target threshold and after its grace period. With `min_heating_rate: 0`, it errors if the chamber is flat or cooling over the configured rate window. Set a higher measured minimum to detect inadequate but positive heating. The check reports the rate and target in its error, then aborts startup.
+Time below is measured from when `WAIT_CHAMBER_EQUILIBRIUM` starts. With the default settings, the add-on behaves as follows:
 
 | Elapsed time | Reading and decision |
 | --- | --- |
-| Immediately | Record the starting chamber temperature. |
-| Every minute | Report the latest temperature and rate. Check the rolling heating rate while below target. |
-| Once target is reached | Continue sampling until the temperature change over the five-minute stability window is within the configured tolerance. |
-| 30-minute timeout | Abort startup with an error if the heating or stability conditions have not passed. |
+| 8 minutes | Record the first chamber reading as the baseline. |
+| 13 minutes | Record a new reading. Compare it with the 8-minute reading and check both pass conditions. |
+| Every 5 minutes afterward | Compare the latest reading with the immediately previous reading and check both pass conditions again. |
+| 90-minute timeout | If the pass conditions have not both been met, stop startup with an error. |
 
-The target condition defaults to target minus 3 C. Stability defaults to no more than 3 C change across five minutes. Both conditions must pass together. `max_wait` is configurable. The five-minute rate and stability windows, grace period, minimum heating rate, interval, and tolerances are configurable in `[chamber_equilibrium]` or per command using `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, `STABILITY_WINDOW`, `MAX_WAIT`, `HEATING_RATE_WINDOW`, `HEATING_RATE_GRACE`, and `MIN_HEATING_RATE`. Set a positive `min_heating_rate` from observed data for your printer. The zero default catches no-rise or falling-temperature behavior without assuming a universal chamber heating rate. This monitor complements Klipper's `verify_heater` protection and does not replace it.
+The default pass conditions are a current reading at least target minus 3 C and an absolute change of no more than 3 C from the previous reading. Both must pass in the same comparison. The 8-minute reading establishes the baseline, so the earliest possible pass is at 13 minutes. Timing and tolerances use the `[chamber_equilibrium]` settings above. The `WAIT_CHAMBER_EQUILIBRIUM` command can override them per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
 
 ## Startup macro integration
 
@@ -60,7 +57,7 @@ Retain Klipper's heater temperature limits and configure `verify_heater` for the
 
 ### Example of tuning for one printer
 
-On the original author's printer, the slicer requests 60 C and experience shows the chamber usually reaches stability in about 13 minutes. With one-minute samples, the add-on can now display the warm-up trajectory and verify that result against the configured five-minute stability window. To require reaching the full slicer target on that printer, set `target_tolerance: 0`. A positive minimum heating rate should be based on observed data from the specific heater and chamber. Other users should tune these values to their own hardware and sensor placement.
+On the original author's printer, the slicer requests 60 C and experience shows the chamber is usually stable by 13 minutes. The first sample at 8 minutes is the baseline, so 13 minutes is the first point where the add-on can confirm stability. To require reaching the full slicer target on this printer, set `target_tolerance: 0`. Other users should tune these values to their own sensor placement, heater, chamber, and observed warmup behavior.
 
 The original RatOS config also requested 150 C preheat despite an 80 C heater `max_temp`, so that setup uses an 80 C preheat target while retaining the existing limit. This is specific to the original author's hardware.
 
@@ -80,4 +77,4 @@ The original RatOS config also requested 150 C preheat despite an 80 C heater `m
 
 ## Checks
 
-With heaters disabled and the printer cold, run `HELP WAIT_CHAMBER_EQUILIBRIUM` to confirm the command is registered. Do not run a real heater cycle until the chamber sensor configuration, heater sensor configuration, heater limit, preheat target, printing offset, and `verify_heater` values have been checked against your hardware. During supervised testing, use a low slicer chamber target within the hardware-approved range, verify readings appear once per minute, the console rates track the measured warm-up, the stability check spans five minutes, and startup aborts at the configured timeout if the criteria are not met. Confirm bed/fan behavior and post-preheat chamber control match the original RatOS sequence.
+With heaters disabled and the printer cold, run `HELP WAIT_CHAMBER_EQUILIBRIUM` to confirm the command is registered. Do not run a real heater cycle until the chamber sensor configuration, heater sensor configuration, heater limit, preheat target, printing offset, and `verify_heater` values have been checked against your hardware. During supervised testing, use a low slicer chamber target within the hardware-approved range, verify the first reading is after 8 minutes, subsequent readings are 5 minutes apart, and startup errors after 90 minutes if the pass criteria are not met. Confirm bed/fan behavior and post-preheat chamber control match the original RatOS sequence.
