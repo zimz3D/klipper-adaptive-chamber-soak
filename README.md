@@ -20,7 +20,16 @@ stability_tolerance: 3
 max_wait: 5400
 ```
 
-Values are in seconds for the delays and timeout, and degrees Celsius for the tolerances. Defaults give an 8-minute first sample, 5-minute intervals, a minimum temperature of target minus 3 C, a maximum 3 C change between adjacent readings, and a 90-minute fail-closed timeout. The `WAIT_CHAMBER_EQUILIBRIUM` command can also override these defaults per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
+Time below is measured from when `WAIT_CHAMBER_EQUILIBRIUM` starts. With the default settings, the add-on behaves as follows:
+
+| Elapsed time | Reading and decision |
+| --- | --- |
+| 8 minutes | Record the first chamber reading as the baseline. |
+| 13 minutes | Record a new reading. Compare it with the 8-minute reading and check both pass conditions. |
+| Every 5 minutes afterward | Compare the latest reading with the immediately previous reading and check both pass conditions again. |
+| 90-minute timeout | If the pass conditions have not both been met, stop startup with an error. |
+
+The chamber passes when its latest reading is no more than 3 C below the requested target and the absolute change since the previous reading is no more than 3 C. Both conditions must pass in the same comparison. The 8-minute reading establishes the baseline, so the earliest pass is at 13 minutes. Timing and tolerances use the `[chamber_equilibrium]` settings above. The `WAIT_CHAMBER_EQUILIBRIUM` command can override them per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
 
 ## Startup macro integration
 
