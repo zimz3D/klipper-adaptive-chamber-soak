@@ -29,7 +29,7 @@ Time below is measured from when `WAIT_CHAMBER_EQUILIBRIUM` starts. With the def
 | Every 5 minutes afterward | Compare the latest reading with the immediately previous reading and check both pass conditions again. |
 | 90-minute timeout | If the pass conditions have not both been met, stop startup with an error. |
 
-The chamber passes when its latest reading is no more than 3 C below the requested target and the absolute change since the previous reading is no more than 3 C. Both conditions must pass in the same comparison. The 8-minute reading establishes the baseline, so the earliest pass is at 13 minutes. Timing and tolerances use the `[chamber_equilibrium]` settings above. The `WAIT_CHAMBER_EQUILIBRIUM` command can override them per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
+The default pass conditions are a current reading at least target minus 3 C and an absolute change of no more than 3 C from the previous reading. Both must pass in the same comparison. The 8-minute reading establishes the baseline, so the earliest possible pass is at 13 minutes. Timing and tolerances use the `[chamber_equilibrium]` settings above. The `WAIT_CHAMBER_EQUILIBRIUM` command can override them per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
 
 ## Startup macro integration
 
@@ -55,9 +55,11 @@ Configure the chamber temperature sensor in `printer.cfg` for the sensor actuall
 
 Retain Klipper's heater temperature limits and configure `verify_heater` for the installed heater, sensor, power supply, and enclosure. Ensure every commanded preheat and printing target, including any RatOS heater offset, stays within the configured heater limit. Do not copy pin assignments, sensor types, or temperature limits from another printer without verifying that they match your hardware.
 
-### Original author's setup notes
+### Example of tuning for one printer
 
-The original RatOS setup supplied with this project had a 150 C preheat request and an 80 C heater `max_temp`. Its integration therefore sets `variable_chamber_heater_preheating_temp: 80` and keeps that existing limit unchanged. Those values describe the author's setup only. Other installations must use their verified hardware limits and configure their RatOS preheat and offsets accordingly.
+On the original author's printer, the slicer requests 60 C and experience shows the chamber is usually stable by 13 minutes. The first sample at 8 minutes is the baseline, so 13 minutes is the first point where the add-on can confirm stability. To require reaching the full slicer target on this printer, set `target_tolerance: 0`. Other users should tune these values to their own sensor placement, heater, chamber, and observed warmup behavior.
+
+The original RatOS config also requested 150 C preheat despite an 80 C heater `max_temp`, so that setup uses an 80 C preheat target while retaining the existing limit. This is specific to the original author's hardware.
 
 ## Files and destinations
 
