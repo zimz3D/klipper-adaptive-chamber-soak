@@ -30,7 +30,16 @@ The Python add-on registers `WAIT_CHAMBER_EQUILIBRIUM`. Your printer's startup m
 WAIT_CHAMBER_EQUILIBRIUM TARGET=<slicer chamber target> SENSOR="<chamber sensor object>"
 ```
 
-RatOS's `variable_beacon_adaptive_heat_soak` setting controls a separate Beacon-based bed-stability routine. It does not call or disable this chamber add-on. Configure bed soaking independently if needed. Preserve your existing heater, fan, movement, and post-preheat controls when changing a startup macro.
+### RatOS heatsoak setting
+
+On RatOS V-Core 4 setups, add these values to the existing `[gcode_macro RatOS]` section in `printer.cfg` to turn off RatOS bed heatsoaking, including Beacon adaptive heatsoaking and any fixed-duration bed soak:
+
+```ini
+variable_beacon_adaptive_heat_soak: False
+variable_bed_heat_soak_time: 0
+```
+
+If `[gcode_macro RatOS]` already exists, add only the variables to that section. Do not create a duplicate section. RatOS's Beacon setting controls bed stability and does not call the chamber add-on. Your startup macro still needs to call `WAIT_CHAMBER_EQUILIBRIUM` as shown above. Preserve existing heater, fan, movement, and post-preheat controls when changing startup macros. RatOS versions may expose bed-soak variables differently, so confirm the matching settings in your generated config.
 
 ## Hardware configuration
 
