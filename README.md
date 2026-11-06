@@ -4,7 +4,7 @@
 >
 > This software controls or influences chamber-heating behavior. Improper configuration, installation, or use may cause equipment damage, fire, personal injury, or property loss. You are solely responsible for assessing suitability, verifying all hardware and temperature limits, installing and configuring the software correctly, supervising operation, and maintaining appropriate independent safety protections. This project is provided “as is,” without warranty. To the fullest extent permitted by applicable law, the authors and contributors disclaim liability for damage, injury, loss, or claims arising from the software or its use. Do not rely on this software as a substitute for hardware safety controls or safe operating practices.
 
-Klipper add-on that replaces a fixed chamber soak with a temperature-stability check. The core command is usable from Klipper macros, with a RatOS-specific integration described below.
+Klipper add-on that replaces a fixed chamber soak with a temperature-stability check. Integrate it by calling its command from the startup macro that currently performs your chamber soak.
 
 ## Klipper add-on
 
@@ -22,16 +22,15 @@ max_wait: 5400
 
 Values are in seconds for the delays and timeout, and degrees Celsius for the tolerances. Defaults give an 8-minute first sample, 5-minute intervals, a minimum temperature of target minus 3 C, a maximum 3 C change between adjacent readings, and a 90-minute fail-closed timeout. The `WAIT_CHAMBER_EQUILIBRIUM` command can also override these defaults per call using `SENSOR`, `INITIAL_DELAY`, `INTERVAL`, `TARGET_TOLERANCE`, `STABILITY_TOLERANCE`, and `MAX_WAIT`.
 
-## RatOS-specific integration
+## Startup macro integration
 
-RatOS Beacon adaptive heatsoaking is a separate bed-stability feature. `variable_beacon_adaptive_heat_soak` controls that Beacon-based bed soak. It does not turn off the chamber heater macro or replace its chamber-temperature wait. Keep the chamber macro override below to route the chamber wait through this add-on. RatOS bed heatsoaking is configured separately through `bed_heat_soak_time` and related settings.
+The Python add-on registers `WAIT_CHAMBER_EQUILIBRIUM`. Your printer's startup macro must call it with the slicer chamber target and the configured chamber-air sensor. Replace the fixed chamber wait or soak step with a call in this form:
 
-```ini
-# Adaptive Heat Soak
-variable_beacon_adaptive_heat_soak: False
+```gcode
+WAIT_CHAMBER_EQUILIBRIUM TARGET=<slicer chamber target> SENSOR="<chamber sensor object>"
 ```
 
-The existing `[gcode_macro RatOS]` section is usually already defined, so add only the comment and variable inside it. Do not add a duplicate section. `False` disables Beacon adaptive bed heatsoaking. Set it only if that is the desired bed-soak behavior. It does not disable the chamber equilibrium gate or the chamber heater.
+RatOS's `variable_beacon_adaptive_heat_soak` setting controls a separate Beacon-based bed-stability routine. It does not call or disable this chamber add-on. Configure bed soaking independently if needed. Preserve your existing heater, fan, movement, and post-preheat controls when changing a startup macro.
 
 ## Hardware configuration
 
@@ -47,15 +46,14 @@ The original RatOS setup supplied with this project had a 150 C preheat request 
 
 - `chamber_equilibrium.py` → Klipper `klippy/extras/chamber_equilibrium.py` on the printer host. Common RatOS path is `/home/pi/klipper/klippy/extras/`.
 - `chamber_equilibrium.cfg` → printer configuration directory, commonly `~/printer_data/config/`.
-- `chamber_heater_override.cfg` → reference patch for the existing RatOS `_CHAMBER_HEATER_ON` macro. This override is required to replace that macro’s blocking chamber-temperature wait with the equilibrium check. Apply the documented edits to a copy of the existing macro. Do not add a duplicate `[gcode_macro _CHAMBER_HEATER_ON]` section. Preserve RatOS fan, bed, toolhead movement, filter, post-preheat, and delayed-control code.
 
 ## Backup and install
 
-1. In Mainsail/Fluidd, download a backup of `printer.cfg` and the RatOS chamber-heater configuration file that defines `_CHAMBER_HEATER_ON`. Also save the current `klippy.log`.
+1. In Mainsail/Fluidd, back up `printer.cfg` and any file containing your startup or chamber-soak macro. Also save the current `klippy.log`.
 2. Upload `chamber_equilibrium.py` to `/home/pi/klipper/klippy/extras/` and `chamber_equilibrium.cfg` to `~/printer_data/config/`.
 3. Include `chamber_equilibrium.cfg` from `printer.cfg` using its actual config path, for example `[include chamber_equilibrium.cfg]`. Set the sensor and timing values in that file as needed. Klipper loads the Python extra through its `[chamber_equilibrium]` section.
-4. Apply the macro edits described in `chamber_heater_override.cfg` to the existing macro copy in your user config, ensuring the include order loads your customized definition in place of the RatOS definition. Config section override behavior depends on your RatOS version. Validate duplicate-section handling before restarting.
-5. Configure the RatOS preheat target and heater offsets so they remain within your heater's existing Klipper `max_temp`. Do not raise the limit to accommodate an unsafe target.
+4. In your startup macro, replace the existing chamber soak wait with `WAIT_CHAMBER_EQUILIBRIUM`, passing the slicer target and your configured chamber sensor. Use your firmware's supported macro override method. Do not create a duplicate macro section unless your configuration system supports merging it.
+5. Configure heater targets and offsets so they remain within your heater's existing Klipper `max_temp`. Do not raise the limit to accommodate an unsafe target.
 6. Restart Klipper. If it fails to start, restore the backed-up configs and remove the Python extra.
 
 ## Checks
