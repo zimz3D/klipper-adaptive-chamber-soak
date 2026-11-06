@@ -33,11 +33,15 @@ variable_beacon_adaptive_heat_soak: False
 
 The existing `[gcode_macro RatOS]` section is usually already defined, so add only the comment and variable inside it. Do not add a duplicate section. `False` disables Beacon adaptive bed heatsoaking. Set it only if that is the desired bed-soak behavior. It does not disable the chamber equilibrium gate or the chamber heater.
 
-## RatOS chamber integration and hardware checks before enabling
+## Hardware configuration
 
-Your supplied RatOS macro requests a 150 C chamber-heater preheat, while the supplied Klipper heater `max_temp` is 80 C. This package explicitly ignores the 150 C request and sets `variable_chamber_heater_preheating_temp: 80`, retaining the existing 80 C `max_temp`. Klipper rejects heater targets above `max_temp`. The printing target plus RatOS heating offset must also stay at or below 80 C or Klipper will reject it. The 80 C limit itself still needs to match the heater, sensor, wiring, and chamber materials' manufacturer ratings before enabling heat.
+Configure the chamber temperature sensor in `printer.cfg` for the sensor actually installed to measure chamber air. Set its Klipper sensor type, MCU pin, pullup, and any other required values from the sensor and controller documentation. Then set the `[chamber_equilibrium]` `sensor` option to that configured Klipper object name. The example name `temperature_sensor chamber` is only a placeholder. Some printers also have a separate thermistor for a PTC heater. Configure the heater's own sensor and heater safety limits according to the hardware design. The chamber-air sensor used by this add-on and the heater's control sensor may be different devices.
 
-The supplied snippets do not include the chamber heater section or verify_heater values, so this package cannot safely rewrite those values. Restore conservative `verify_heater` settings appropriate to the installed hardware and follow Klipper/RatOS documentation. The duplicate PF4 thermistor must be resolved by confirming which physical sensor is wired to PF4 and keeping exactly one active pin assignment. Do not change sensor type or pin based on guesswork.
+Retain Klipper's heater temperature limits and configure `verify_heater` for the installed heater, sensor, power supply, and enclosure. Ensure every commanded preheat and printing target, including any RatOS heater offset, stays within the configured heater limit. Do not copy pin assignments, sensor types, or temperature limits from another printer without verifying that they match your hardware.
+
+### Original author's setup notes
+
+The original RatOS setup supplied with this project had a 150 C preheat request and an 80 C heater `max_temp`. Its integration therefore sets `variable_chamber_heater_preheating_temp: 80` and keeps that existing limit unchanged. Those values describe the author's setup only. Other installations must use their verified hardware limits and configure their RatOS preheat and offsets accordingly.
 
 ## Files and destinations
 
@@ -51,9 +55,9 @@ The supplied snippets do not include the chamber heater section or verify_heater
 2. Upload `chamber_equilibrium.py` to `/home/pi/klipper/klippy/extras/` and `chamber_equilibrium.cfg` to `~/printer_data/config/`.
 3. Include `chamber_equilibrium.cfg` from `printer.cfg` using its actual config path, for example `[include chamber_equilibrium.cfg]`. Set the sensor and timing values in that file as needed. Klipper loads the Python extra through its `[chamber_equilibrium]` section.
 4. Apply the macro edits described in `chamber_heater_override.cfg` to the existing macro copy in your user config, ensuring the include order loads your customized definition in place of the RatOS definition. Config section override behavior depends on your RatOS version. Validate duplicate-section handling before restarting.
-5. In the `[gcode_macro RatOS]` settings override, set `variable_chamber_heater_preheating_temp: 80`. This disregards the old 150 C request. Keep the heater `max_temp: 80` unchanged. Resolve the printing offset and duplicate PF4 as described above before using chamber heat.
+5. Configure the RatOS preheat target and heater offsets so they remain within your heater's existing Klipper `max_temp`. Do not raise the limit to accommodate an unsafe target.
 6. Restart Klipper. If it fails to start, restore the backed-up configs and remove the Python extra.
 
 ## Checks
 
-With heaters disabled and the printer cold, run `HELP WAIT_CHAMBER_EQUILIBRIUM` to confirm the command is registered. Do not run a real heater cycle until the heater limit, preheat target, printing offset, verify_heater values, and PF4 sensor assignment have been checked. During supervised testing, use a low slicer chamber target within the hardware-approved range, verify the first reading is after 8 minutes, subsequent readings are 5 minutes apart, and startup errors after 90 minutes if the pass criteria are not met. Confirm bed/fan behavior and post-preheat chamber control match the original RatOS sequence.
+With heaters disabled and the printer cold, run `HELP WAIT_CHAMBER_EQUILIBRIUM` to confirm the command is registered. Do not run a real heater cycle until the chamber sensor configuration, heater sensor configuration, heater limit, preheat target, printing offset, and `verify_heater` values have been checked against your hardware. During supervised testing, use a low slicer chamber target within the hardware-approved range, verify the first reading is after 8 minutes, subsequent readings are 5 minutes apart, and startup errors after 90 minutes if the pass criteria are not met. Confirm bed/fan behavior and post-preheat chamber control match the original RatOS sequence.
